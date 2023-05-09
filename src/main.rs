@@ -1,8 +1,11 @@
 mod compile;
+mod eval;
 mod ir;
 mod math;
 mod neurons;
 
+use ir::expr;
+use ir::register::Register;
 use math::vector::*;
 use neurons::neuron::Neuron;
 
@@ -61,7 +64,7 @@ fn train(
 
     data
 }
-
+/*
 fn main() {
     let examples = [
         Example {
@@ -102,4 +105,44 @@ fn main() {
         total_error as f32 / examples.len() as f32,
         data
     );
+}
+*/
+
+fn main() {
+    let neuron = layer(1, 1);
+    let data: Vec<_> = (0..3).map(|i| expr::Expr::Variable(i)).collect();
+    let input: Vec<_> = (3..5).map(|i| expr::Expr::Variable(i)).collect();
+    let expr = neuron.evaluate(&input, &data).pop().unwrap();
+    let mut program =
+        compile::flatten::to_program(&expr, (0..5).map(|i| Register { index: i }).collect());
+    println!("{:#?}", program);
+    compile::register_alloc::realloc(&mut program);
+    println!("{:#?}", program);
+}
+
+#[cfg(test)]
+mod test {
+    use crate::eval::register::evaluate_with;
+
+    use super::*;
+
+    #[test]
+    fn reg_alloc_identity() {
+        let mut rng = thread_rng();
+        let neuron = layer(1, 1);
+        let data: Vec<_> = (0..3).map(|i| expr::Expr::Variable(i)).collect();
+        let input: Vec<_> = (3..5).map(|i| expr::Expr::Variable(i)).collect();
+        let expr = neuron.evaluate(&input, &data).pop().unwrap();
+        let mut program =
+            compile::flatten::to_program(&expr, (0..5).map(|i| Register { index: i }).collect());
+
+        let values: Vec<_> = (0..5).map(|_| rng.gen_range(-1.0..1.0)).collect();
+        let old_value = evaluate_with(&program, &values);
+        println!("{:#?} = {}", program, old_value);
+        compile::register_alloc::realloc(&mut program);
+        let new_value = evaluate_with(&program, &values);
+        println!("to {:#?} = {}", program, new_value);
+
+        assert_eq!(old_value, new_value)
+    }
 }

@@ -11,6 +11,7 @@ impl RegisterSource {
 
     fn fresh(&mut self) -> register::Register {
         let index = self.unused;
+        self.unused += 1;
         register::Register { index }
     }
 }

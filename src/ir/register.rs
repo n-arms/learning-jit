@@ -9,7 +9,7 @@ pub struct Program {
     pub output: Value,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Register {
     pub index: usize,
 }
