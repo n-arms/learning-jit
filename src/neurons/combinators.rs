@@ -45,7 +45,7 @@ pub struct Repeat<A> {
 impl<A: Neuron> Neuron for Repeat<A> {
     fn evaluate<T: Number>(&self, input: VectorView<T>, data: VectorView<T>) -> Vector<T> {
         let mut output = Vec::new();
-        let data_size = self.size().data;
+        let data_size = self.neuron.size().data;
 
         for i in 0..self.repetitions {
             let local_data = &data[i * data_size..(i + 1) * data_size];
