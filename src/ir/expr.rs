@@ -13,9 +13,9 @@ pub enum Operator {
 
 #[derive(Clone)]
 pub struct IfPositive {
-    predicate: Expr,
-    consequent: Expr,
-    alternative: Expr,
+    pub predicate: Expr,
+    pub consequent: Expr,
+    pub alternative: Expr,
 }
 
 #[derive(Clone)]

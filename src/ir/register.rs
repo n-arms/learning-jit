@@ -4,15 +4,17 @@ use super::expr;
 
 #[derive(Debug)]
 pub struct Program {
-    pub input: Vec<usize>,
+    pub input: Vec<Register>,
     pub statements: Vec<Statement>,
     pub output: Value,
 }
 
+#[derive(Copy, Clone)]
 pub struct Register {
-    index: usize,
+    pub index: usize,
 }
 
+#[derive(Copy, Clone)]
 pub enum Value {
     Register(Register),
     Number(f32),

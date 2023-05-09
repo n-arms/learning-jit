@@ -1,3 +1,4 @@
+mod compile;
 mod ir;
 mod math;
 mod neurons;
