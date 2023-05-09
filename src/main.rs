@@ -1,3 +1,4 @@
+mod ir;
 mod math;
 mod neurons;
 
@@ -80,7 +81,6 @@ fn main() {
         },
     ];
     let neuron = layer(2, 4).compose(layer(4, 1));
-    //layer(2, 4).compose(layer(4, 4)).compose(layer(4, 1));
     let data = train(&examples, &neuron, 0.0001, 1_000_000);
 
     let mut total_error = 0.0;
