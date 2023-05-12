@@ -3,12 +3,17 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use crate::math::number::Number;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Operator {
     Add,
     Subtract,
     Multiply,
     Divide,
+}
+impl Operator {
+    pub fn is_associative(&self) -> bool {
+        *self == Self::Add || *self == Self::Multiply
+    }
 }
 
 #[derive(Clone)]
@@ -130,4 +135,12 @@ impl fmt::Debug for IfPositive {
             self.predicate, self.consequent, self.alternative
         )
     }
+}
+
+pub(crate) fn evaluate(
+    expr: &Expr,
+    values: &[f64],
+    index_env: &std::collections::HashMap<usize, f64>,
+) -> f32 {
+    todo!()
 }

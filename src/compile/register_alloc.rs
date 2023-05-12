@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::ir::register::{Expr, Program, Register, Statement, Value};
 
+#[derive(Debug)]
 pub struct LiveRange {
     pub start: usize,
     pub end: usize,
@@ -134,7 +135,8 @@ impl RegisterPool {
     }
 }
 
-pub fn realloc(program: &mut Program) {
+/// Return the number of registers the new program requires
+pub fn realloc(program: &mut Program) -> usize {
     let mut ranges = live_ranges(program);
     ranges.sort_by_key(|range| range.start);
 
@@ -147,10 +149,11 @@ pub fn realloc(program: &mut Program) {
     for current_range in ranges {
         active_ranges.retain(|active_range| {
             let old = active_range.end < current_range.start;
+
             if old {
                 free_registers.free(substitution[&active_range.register]);
             }
-            old
+            !old
         });
 
         let new_reg = free_registers.get();
@@ -158,4 +161,10 @@ pub fn realloc(program: &mut Program) {
         active_ranges.push(current_range);
     }
     apply_allocation(program, &substitution);
+
+    substitution
+        .into_values()
+        .map(|x| x.index + 1)
+        .max()
+        .unwrap_or(0)
 }

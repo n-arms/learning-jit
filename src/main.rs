@@ -64,85 +64,71 @@ fn train(
 
     data
 }
-/*
-fn main() {
-    let examples = [
-        Example {
-            input: vec![0.0, 0.0],
-            target_output: vec![0.0],
-        },
-        Example {
-            input: vec![1.0, 0.0],
-            target_output: vec![1.0],
-        },
-        Example {
-            input: vec![0.0, 1.0],
-            target_output: vec![1.0],
-        },
-        Example {
-            input: vec![1.0, 1.0],
-            target_output: vec![0.0],
-        },
-    ];
-    let neuron = layer(2, 4).compose(layer(4, 1));
-    let data = train(&examples, &neuron, 0.0001, 1_000_000);
 
-    let mut total_error = 0.0;
-
-    for example in &examples {
-        let error = error(example, &neuron, &data);
-        total_error += error;
-        println!(
-            "{:?} -> {:?} (expected {:?}, error {})",
-            example.input,
-            neuron.evaluate(&example.input, &data),
-            example.target_output,
-            error
-        );
-    }
-    println!(
-        "average error is {} on data {:?}",
-        total_error as f32 / examples.len() as f32,
-        data
-    );
-}
-*/
-
-fn main() {
-    let neuron = layer(1, 1);
-    let data: Vec<_> = (0..3).map(|i| expr::Expr::Variable(i)).collect();
-    let input: Vec<_> = (3..5).map(|i| expr::Expr::Variable(i)).collect();
-    let expr = neuron.evaluate(&input, &data).pop().unwrap();
-    let mut program =
-        compile::flatten::to_program(&expr, (0..5).map(|i| Register { index: i }).collect());
-    println!("{:#?}", program);
-    compile::register_alloc::realloc(&mut program);
-    println!("{:#?}", program);
-}
+fn main() {}
 
 #[cfg(test)]
 mod test {
-    use crate::eval::register::evaluate_with;
+    use std::collections::HashMap;
+
+    use crate::eval::register;
 
     use super::*;
 
     #[test]
     fn reg_alloc_identity() {
         let mut rng = thread_rng();
-        let neuron = layer(1, 1);
-        let data: Vec<_> = (0..3).map(|i| expr::Expr::Variable(i)).collect();
-        let input: Vec<_> = (3..5).map(|i| expr::Expr::Variable(i)).collect();
+        let neuron = layer(1, 4).compose(layer(4, 4)).compose(layer(4, 1));
+        let data: Vec<_> = (0..neuron.size().data)
+            .map(|i| expr::Expr::Variable(i))
+            .collect();
+        let input: Vec<_> = (0..neuron.size().input)
+            .map(|i| expr::Expr::Variable(i + neuron.size().data))
+            .collect();
+
+        let values: Vec<f32> = (0..neuron.size().data + neuron.size().input)
+            .map(|_| rng.gen_range(-1.0..1.0))
+            .collect();
+
+        let index_env: HashMap<_, _> = (0..neuron.size().data + neuron.size().input)
+            .map(|index| (index, values[index]))
+            .collect();
+
+        let register_env: HashMap<_, _> = index_env
+            .iter()
+            .map(|(index, value)| (Register { index: *index }, *value))
+            .collect();
+
         let expr = neuron.evaluate(&input, &data).pop().unwrap();
+        let original_value = eval::expr::evaluate(&expr, &index_env);
         let mut program =
-            compile::flatten::to_program(&expr, (0..5).map(|i| Register { index: i }).collect());
-
-        let values: Vec<_> = (0..5).map(|_| rng.gen_range(-1.0..1.0)).collect();
-        let old_value = evaluate_with(&program, &values);
+            compile::flatten::to_program(&expr, register_env.clone().into_keys().collect());
+        let old_value = register::evaluate(&program, register_env.clone());
         println!("{:#?} = {}", program, old_value);
-        compile::register_alloc::realloc(&mut program);
-        let new_value = evaluate_with(&program, &values);
-        println!("to {:#?} = {}", program, new_value);
+        println!("{:?} = {}", expr, original_value);
 
-        assert_eq!(old_value, new_value)
+        assert_eq!(
+            old_value, original_value,
+            "transformation from expression tree to register instructions failed"
+        );
+
+        let old_input = program.input.clone();
+        let registers = compile::register_alloc::realloc(&mut program);
+
+        let new_register_env = program
+            .input
+            .iter()
+            .zip(&old_input)
+            .map(|(new, old)| (*new, register_env[old]))
+            .collect();
+
+        println!("{:#?}", program);
+        let new_value = register::evaluate(&program, new_register_env);
+        println!("\t= {}", new_value);
+
+        // NEED TO TRANSFORM THE ENV TO MATCH THE TRANSFORMATIONS DONE
+
+        assert!(registers < 50);
+        assert_eq!(old_value, new_value, "register allocation failed");
     }
 }

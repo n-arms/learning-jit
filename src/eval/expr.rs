@@ -4,11 +4,16 @@ use crate::ir::expr::{Expr, Operator};
 
 pub type Env = HashMap<usize, f32>;
 
-pub fn evaluate(expr: &Expr, env: &Env) -> f32 {
+pub fn evaluate_rec(expr: &Expr, env: &Env) -> f32 {
     match expr {
         Expr::Operation { operator, operands } => {
-            let first = evaluate(&operands[0], env);
-            let second = evaluate(&operands[0], env);
+            let first = evaluate_rec(&operands[0], env);
+            let second = evaluate_rec(&operands[1], env);
+
+            println!(
+                "{:?} = {}, {:?} = {}",
+                operands[0], first, operands[1], second
+            );
 
             match operator {
                 Operator::Add => first + second,
@@ -20,11 +25,16 @@ pub fn evaluate(expr: &Expr, env: &Env) -> f32 {
         Expr::Variable(variable) => env[variable],
         Expr::Number(number) => *number,
         Expr::IfPositive(if_positive) => {
-            if evaluate(&if_positive.predicate, env) >= 0.0 {
-                evaluate(&if_positive.consequent, env)
+            if evaluate_rec(&if_positive.predicate, env) >= 0.0 {
+                evaluate_rec(&if_positive.consequent, env)
             } else {
-                evaluate(&if_positive.alternative, env)
+                evaluate_rec(&if_positive.alternative, env)
             }
         }
     }
+}
+
+pub fn evaluate(expr: &Expr, env: &Env) -> f32 {
+    println!("evaluating expr with env {:?}", env);
+    evaluate_rec(expr, env)
 }

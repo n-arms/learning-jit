@@ -12,6 +12,9 @@ impl RegisterSource {
     fn fresh(&mut self) -> register::Register {
         let index = self.unused;
         self.unused += 1;
+        if index == 7 {
+            //println!("SEVEN IS FRESH");
+        }
         register::Register { index }
     }
 }
@@ -36,6 +39,33 @@ fn flatten(
         expr::Expr::Operation { operator, operands } => {
             let a = flatten(&operands[0], registers, program);
             let b = flatten(&operands[1], registers, program);
+            /*
+            if let register::Value::Register(result) = a {
+                program.with_statement(register::Statement {
+                    destination: result,
+                    expr: register::Expr::Operation {
+                        operator: *operator,
+                        operand: b,
+                    },
+                });
+
+                return register::Value::Register(result);
+            }
+
+            if operator.is_associative() {
+                if let register::Value::Register(result) = b {
+                    program.with_statement(register::Statement {
+                        destination: result,
+                        expr: register::Expr::Operation {
+                            operator: *operator,
+                            operand: a,
+                        },
+                    });
+
+                    return register::Value::Register(result);
+                }
+            }
+            */
 
             let result = registers.fresh();
 

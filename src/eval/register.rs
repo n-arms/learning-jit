@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 
 use crate::ir::{
     expr::Operator,
@@ -7,16 +7,8 @@ use crate::ir::{
 
 pub type Env = HashMap<Register, f32>;
 
-pub fn evaluate_with(program: &Program, vec_env: &[f32]) -> f32 {
-    let env = vec_env
-        .into_iter()
-        .zip(&program.input)
-        .map(|(a, b)| (*b, *a))
-        .collect();
-    evaluate(program, env)
-}
-
 pub fn evaluate(program: &Program, mut env: Env) -> f32 {
+    //println!("evaluating reg with env {:?}", env);
     for statement in &program.statements {
         match statement.expr {
             Expr::Move(value) => {
@@ -25,6 +17,7 @@ pub fn evaluate(program: &Program, mut env: Env) -> f32 {
             Expr::Operation { operator, operand } => {
                 let first = evaluate_value(&operand, &env);
                 let entry = env.entry(statement.destination);
+                assert!(matches!(entry, Entry::Occupied(..)));
                 entry.and_modify(|dest| match operator {
                     Operator::Add => *dest += first,
                     Operator::Subtract => *dest -= first,
@@ -52,7 +45,13 @@ pub fn evaluate(program: &Program, mut env: Env) -> f32 {
 
 fn evaluate_value(value: &Value, env: &Env) -> f32 {
     match value {
-        Value::Register(reg) => env[reg],
+        Value::Register(reg) => {
+            let entry = env.get(reg);
+            match entry {
+                Some(value) => *value,
+                None => panic!("no value in register {:?}", reg),
+            }
+        }
         Value::Number(number) => *number,
     }
 }
