@@ -4,14 +4,18 @@ mod ir;
 mod math;
 mod neurons;
 
-use ir::expr;
+use ir::expr::Expr;
 use ir::register::Register;
 use math::vector::*;
 use neurons::neuron::Neuron;
 
+use eval::{expr, register};
+
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use rand::Rng;
+
+use std::collections::HashMap;
 
 use crate::neurons::learning::layer;
 
@@ -65,7 +69,64 @@ fn train(
     data
 }
 
-fn main() {}
+fn main() {
+    let mut rng = thread_rng();
+    let neuron = layer(1, 4).compose(layer(4, 4)).compose(layer(4, 1));
+    let data: Vec<_> = (0..neuron.size().data).map(|i| Expr::Variable(i)).collect();
+    let input: Vec<_> = (0..neuron.size().input)
+        .map(|i| Expr::Variable(i + neuron.size().data))
+        .collect();
+
+    let values: Vec<f32> = (0..neuron.size().data + neuron.size().input)
+        .map(|_| rng.gen_range(-1.0..1.0))
+        .collect();
+
+    let index_env: HashMap<_, _> = (0..neuron.size().data + neuron.size().input)
+        .map(|index| (index, values[index]))
+        .collect();
+
+    let register_env: HashMap<_, _> = index_env
+        .iter()
+        .map(|(index, value)| (Register { index: *index }, *value))
+        .collect();
+
+    let expr = neuron.evaluate(&input, &data).pop().unwrap();
+    let original_value = eval::expr::evaluate(&expr, &index_env);
+    let mut program =
+        compile::flatten::to_program(&expr, register_env.clone().into_keys().collect());
+    let old_value = register::evaluate(&program, register_env.clone());
+    println!("{:#?} = {}", program, old_value);
+    println!("{:?} = {}", expr, original_value);
+
+    assert_eq!(
+        old_value, original_value,
+        "transformation from expression tree to register instructions failed"
+    );
+
+    let old_input = program.input.clone();
+    let registers = compile::register_alloc::realloc(&mut program);
+
+    let new_register_env = program
+        .input
+        .iter()
+        .zip(&old_input)
+        .map(|(new, old)| (*new, register_env[old]))
+        .collect();
+
+    println!("{:#?}", program);
+    let new_value = register::evaluate(&program, new_register_env);
+    println!(
+        "\t= {}, {} registers, {} instructions",
+        new_value,
+        registers,
+        program.statements.len()
+    );
+
+    // NEED TO TRANSFORM THE ENV TO MATCH THE TRANSFORMATIONS DONE
+
+    assert!(registers < 50);
+    assert_eq!(old_value, new_value, "register allocation failed");
+}
 
 #[cfg(test)]
 mod test {
@@ -79,11 +140,9 @@ mod test {
     fn reg_alloc_identity() {
         let mut rng = thread_rng();
         let neuron = layer(1, 4).compose(layer(4, 4)).compose(layer(4, 1));
-        let data: Vec<_> = (0..neuron.size().data)
-            .map(|i| expr::Expr::Variable(i))
-            .collect();
+        let data: Vec<_> = (0..neuron.size().data).map(|i| Expr::Variable(i)).collect();
         let input: Vec<_> = (0..neuron.size().input)
-            .map(|i| expr::Expr::Variable(i + neuron.size().data))
+            .map(|i| Expr::Variable(i + neuron.size().data))
             .collect();
 
         let values: Vec<f32> = (0..neuron.size().data + neuron.size().input)

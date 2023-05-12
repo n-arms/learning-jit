@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::ir::{expr, register};
 
 struct RegisterSource {
@@ -34,38 +36,42 @@ fn flatten(
     expr: &expr::Expr,
     registers: &mut RegisterSource,
     program: &mut ProgramBuilder,
+    aliased: &HashSet<register::Register>,
 ) -> register::Value {
     match expr {
         expr::Expr::Operation { operator, operands } => {
-            let a = flatten(&operands[0], registers, program);
-            let b = flatten(&operands[1], registers, program);
-            /*
+            let a = flatten(&operands[0], registers, program, aliased);
+            let b = flatten(&operands[1], registers, program, aliased);
+
             if let register::Value::Register(result) = a {
-                program.with_statement(register::Statement {
-                    destination: result,
-                    expr: register::Expr::Operation {
-                        operator: *operator,
-                        operand: b,
-                    },
-                });
-
-                return register::Value::Register(result);
-            }
-
-            if operator.is_associative() {
-                if let register::Value::Register(result) = b {
+                if !aliased.contains(&result) {
                     program.with_statement(register::Statement {
                         destination: result,
                         expr: register::Expr::Operation {
                             operator: *operator,
-                            operand: a,
+                            operand: b,
                         },
                     });
 
                     return register::Value::Register(result);
                 }
             }
-            */
+
+            if operator.is_associative() {
+                if let register::Value::Register(result) = b {
+                    if !aliased.contains(&result) {
+                        program.with_statement(register::Statement {
+                            destination: result,
+                            expr: register::Expr::Operation {
+                                operator: *operator,
+                                operand: a,
+                            },
+                        });
+
+                        return register::Value::Register(result);
+                    }
+                }
+            }
 
             let result = registers.fresh();
 
@@ -89,9 +95,9 @@ fn flatten(
         }
         expr::Expr::Number(number) => register::Value::Number(*number),
         expr::Expr::IfPositive(if_positive) => {
-            let predicate = flatten(&if_positive.predicate, registers, program);
-            let consequent = flatten(&if_positive.consequent, registers, program);
-            let alternative = flatten(&if_positive.alternative, registers, program);
+            let predicate = flatten(&if_positive.predicate, registers, program, aliased);
+            let consequent = flatten(&if_positive.consequent, registers, program, aliased);
+            let alternative = flatten(&if_positive.alternative, registers, program, aliased);
 
             let result = registers.fresh();
 
@@ -113,7 +119,9 @@ pub fn to_program(expr: &expr::Expr, input: Vec<register::Register>) -> register
     let mut registers =
         RegisterSource::new(input.iter().map(|reg| reg.index + 1).max().unwrap_or(0));
     let mut program = ProgramBuilder::default();
-    let output = flatten(expr, &mut registers, &mut program);
+    let aliased = input.iter().copied().collect();
+
+    let output = flatten(expr, &mut registers, &mut program, &aliased);
 
     register::Program {
         input,
