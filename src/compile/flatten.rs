@@ -14,9 +14,6 @@ impl RegisterSource {
     fn fresh(&mut self) -> register::Register {
         let index = self.unused;
         self.unused += 1;
-        if index == 7 {
-            //println!("SEVEN IS FRESH");
-        }
         register::Register { index }
     }
 }

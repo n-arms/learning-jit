@@ -1,3 +1,4 @@
+mod bounded;
 mod compile;
 mod eval;
 mod ir;
@@ -122,8 +123,6 @@ fn main() {
         program.statements.len()
     );
 
-    // NEED TO TRANSFORM THE ENV TO MATCH THE TRANSFORMATIONS DONE
-
     assert!(registers < 50);
     assert_eq!(old_value, new_value, "register allocation failed");
 }
@@ -184,8 +183,6 @@ mod test {
         println!("{:#?}", program);
         let new_value = register::evaluate(&program, new_register_env);
         println!("\t= {}", new_value);
-
-        // NEED TO TRANSFORM THE ENV TO MATCH THE TRANSFORMATIONS DONE
 
         assert!(registers < 50);
         assert_eq!(old_value, new_value, "register allocation failed");

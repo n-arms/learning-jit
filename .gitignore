@@ -1,1 +1,4 @@
 /target
+/.ccls-cache
+a.out
+test.S
