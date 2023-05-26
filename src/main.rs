@@ -72,7 +72,7 @@ fn train(
 
 fn main() {
     let mut rng = thread_rng();
-    let neuron = layer(1, 4).compose(layer(4, 4)).compose(layer(4, 1));
+    let neuron = layer(1, 1);
     let data: Vec<_> = (0..neuron.size().data).map(|i| Expr::Variable(i)).collect();
     let input: Vec<_> = (0..neuron.size().input)
         .map(|i| Expr::Variable(i + neuron.size().data))
@@ -125,6 +125,10 @@ fn main() {
 
     assert!(registers < 50);
     assert_eq!(old_value, new_value, "register allocation failed");
+
+    let assembly = compile::emit::emit_program(&program, registers as u32);
+
+    println!("{:#?}", assembly);
 }
 
 #[cfg(test)]

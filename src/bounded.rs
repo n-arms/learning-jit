@@ -1,7 +1,9 @@
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Bounded<const Low: i64, const High: i64> {
     value: i64,
 }
 
+#[derive(Debug)]
 pub enum OutOfBounds<const Low: i64, const High: i64> {
     TooHigh,
     TooLow,
